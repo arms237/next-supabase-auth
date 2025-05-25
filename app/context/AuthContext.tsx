@@ -20,6 +20,10 @@ type AuthContextType = {
   }) => Promise<any>; // Fonction d'inscription
   signInUser: (email: string, password: string) => Promise<any>; // Fonction de connexion
   signOut: () => Promise<void>; // Fonction de déconnexion
+  updateProfile: (userId: string, updates: { 
+    username?: string; 
+    avatar_url?: string;
+  }) => Promise<{ success: boolean; error?: any }>;
 };
 
 // Création du contexte avec une valeur par défaut null
@@ -97,9 +101,11 @@ export const AuthContextProvider = ({ children }: { children: ReactNode }) => {
     });
 
     // Écoute les changements d'état d'authentification
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setSession(session);
+      }
+    );
 
     // Nettoyage de l'abonnement lors du démontage du composant
     return () => {
@@ -114,7 +120,28 @@ export const AuthContextProvider = ({ children }: { children: ReactNode }) => {
       console.error("Error signing out:", error);
     }
   };
+  //Modification du profile utilisateur
+  const updateProfile = async (
+    userId: string,
+    updates: { username?: string; avatar_url?: string }
+  ) => {
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update(updates)
+        .eq("id", userId);
 
+      if (error) {
+        console.error("Erreur lors de la mise à jour du profil:", error);
+        return { success: false, error };
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error("Erreur lors de la mise à jour du profil:", error);
+      return { success: false, error };
+    }
+  };
   // Valeur du contexte à fournir aux composants enfants
   const values = {
     session,
@@ -122,6 +149,7 @@ export const AuthContextProvider = ({ children }: { children: ReactNode }) => {
     signUpNewUser,
     signInUser,
     signOut,
+    updateProfile
   };
 
   // Fournit le contexte à tous les composants enfants

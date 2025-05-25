@@ -1,23 +1,57 @@
-'use client'
+"use client";
 import Link from "next/link";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { FaUser } from "react-icons/fa";
 import { FaCircleUser } from "react-icons/fa6";
-
+import { UserAuth } from "../context/AuthContext";
+import { useRouter } from "next/navigation";
+import { supabase } from "../lib/supabaseClient";
 export default function Navbar() {
-  const session = false;
+  const { session, signOut } = UserAuth();
   const pathname = usePathname();
-  const links = [
-    { name: "Acceuil", path: "/" },
-    { name: "Dashboard", path: "/client/dashboard" },
-  ];
+  const [role, setRole] = useState(null);
+  const router = useRouter();
 
+  // Récupère le rôle depuis la table "profiles" si connecté
+  useEffect(() => {
+      const fetchProfile = async () => {
+        if (session?.user?.id) {
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('username, avatar_url, role')
+            .eq('id', session.user.id)
+            .single();
+          if (!error && data) {
+            setRole(data.role)
+          }
+        }
+      };
+      fetchProfile();
+  }, [session]);
+
+  console.log('role',role)
+  // Génère dynamiquement les liens selon le rôle
+  const links = [{ name: "Acceuil", path: "/" }];
+
+  if (role === "owner") {
+    links.push({ name: "Dashboard", path: "/client/dashboard" });
+    links.push({ name: "Proprio Dashboard", path: "/owner/dashboard" });
+  } else if (role === "admin") {
+    links.push({ name: "Dashboard", path: "/client/dashboard" });
+    links.push({ name: "Admin Dashboard", path: "/admin/dashboard" });  
+  } else if (session) {
+    links.push({ name: "Dashboard", path: "/client/dashboard" });
+  }
+
+  const handleLogout = async () => {
+    await signOut();
+    router.push("/");
+  };
   return (
     <div className="bg-base-100 flex justify-between items-center p-3 ">
-        <Link href="/" className="font-bold text-2xl italic">
-          SupabaseAuthApp
-        </Link>
+      <Link href="/" className="font-bold text-2xl italic">
+        SupabaseAuthApp 
+      </Link>
       <ul className="flex gap-2 ">
         {links.map((link) => (
           <li key={link.path}>
@@ -35,7 +69,9 @@ export default function Navbar() {
         ))}
       </ul>
       {!session && (
-        <Link href='/signup' className="text-3xl"><FaCircleUser/></Link>
+        <Link href="/signup" className="text-3xl">
+          <FaCircleUser />
+        </Link>
       )}
       {session && (
         <div className="dropdown dropdown-end">
@@ -57,16 +93,16 @@ export default function Navbar() {
             className="menu menu-sm dropdown-content bg-base-100 rounded-box z-1 mt-3 w-52 p-2 shadow"
           >
             <li>
-              <a className="justify-between">
+              <Link href="/dashboard" className="justify-between">
                 Profile
                 <span className="badge">New</span>
-              </a>
+              </Link>
             </li>
             <li>
-              <a>Settings</a>
+              <Link href="#">Settings</Link>
             </li>
             <li>
-              <a>Logout</a>
+              <a onClick={handleLogout}>Logout</a>
             </li>
           </ul>
         </div>
