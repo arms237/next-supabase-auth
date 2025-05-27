@@ -143,6 +143,8 @@ export const AuthContextProvider = ({ children }: { children: ReactNode }) => {
     }
   };
   // Valeur du contexte à fournir aux composants enfants
+
+  
   const values = {
     session,
     setSession,

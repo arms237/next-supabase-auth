@@ -11,25 +11,28 @@ export default function Navbar() {
   const pathname = usePathname();
   const [role, setRole] = useState(null);
   const router = useRouter();
+  const [loading, setLoading] = useState(false);
 
   // Récupère le rôle depuis la table "profiles" si connecté
   useEffect(() => {
-      const fetchProfile = async () => {
-        if (session?.user?.id) {
-          const { data, error } = await supabase
-            .from('profiles')
-            .select('username, avatar_url, role')
-            .eq('id', session.user.id)
-            .single();
-          if (!error && data) {
-            setRole(data.role)
-          }
+    setLoading(true);
+    const fetchProfile = async () => {
+      if (session?.user?.id) {
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("username, avatar_url, role")
+          .eq("id", session.user.id)
+          .single();
+        if (!error && data) {
+          setRole(data.role);
         }
-      };
-      fetchProfile();
+      }
+      setLoading(false);
+    };
+
+    fetchProfile();
   }, [session]);
 
-  console.log('role',role)
   // Génère dynamiquement les liens selon le rôle
   const links = [{ name: "Acceuil", path: "/" }];
 
@@ -38,19 +41,27 @@ export default function Navbar() {
     links.push({ name: "Proprio Dashboard", path: "/owner/dashboard" });
   } else if (role === "admin") {
     links.push({ name: "Dashboard", path: "/client/dashboard" });
-    links.push({ name: "Admin Dashboard", path: "/admin/dashboard" });  
+    links.push({ name: "Admin Dashboard", path: "/admin/dashboard" });
   } else if (session) {
     links.push({ name: "Dashboard", path: "/client/dashboard" });
   }
 
   const handleLogout = async () => {
-    await signOut();
-    router.push("/");
+    try {
+      await signOut();
+      router.push("/");
+    } catch {
+      alert("Erreur lors de la déconnexion");
+    }
   };
+  if (loading) {
+    return (
+      <div className="text-2xl px-4 font-semibold">Chargement...</div>
+  )}
   return (
     <div className="bg-base-100 flex justify-between items-center p-3 ">
       <Link href="/" className="font-bold text-2xl italic">
-        SupabaseAuthApp 
+        SupabaseAuthApp
       </Link>
       <ul className="flex gap-2 ">
         {links.map((link) => (
